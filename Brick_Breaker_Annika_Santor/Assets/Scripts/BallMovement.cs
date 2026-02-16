@@ -2,7 +2,10 @@ using UnityEngine;
 
 public class BallMovement : MonoBehaviour
 {
-    [SerializeField] private float _launchForce = 3.0f;
+    
+    [SerializeField] private float _lauchForce = 3.0f;
+    [SerializeField] private float _paddleInfluence = 0.3f;
+    [SerializeField] private float _speedMultiplier = 1.1f;
 
     private Rigidbody2D _rb;
 
@@ -10,37 +13,39 @@ public class BallMovement : MonoBehaviour
     {
         _rb = GetComponent<Rigidbody2D>();
 
-        ResetBall();
+        Vector2 direction = Random.insideUnitCircle;
+        
+        if (Mathf.Abs(direction.x) < 0.25f)
+        {
+            direction.x += 0.5f * Mathf.Sign(direction.x); 
+        }
+
+        _rb.AddForce(direction.normalized * _lauchForce, ForceMode2D.Impulse);
+    }
+
+
+    private void OnCollisionEnter2D(Collision2D other)
+    {
+        if (other.gameObject.CompareTag("Paddle"))
+        {
+            if (!Mathf.Approximately(other.rigidbody.linearVelocity.y, 0.0f))
+            {
+                Vector2 direction = _rb.linearVelocity * (1.0f - _paddleInfluence)
+                                    + other.rigidbody.linearVelocity * _paddleInfluence;
+                
+                _rb.linearVelocity = _rb.linearVelocity.magnitude * direction.normalized;
+            }
+
+            _rb.linearVelocity *= _speedMultiplier;
+
+        }
     }
 
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        ResetBall();
-    }
-
-    void ResetBall()
-    {
-        _rb.linearVelocity = Vector2.zero;
-        transform.position = Vector3.zero;
-
-        Vector2 direction = new Vector2(
-            GetNonZeroRandomFloat(),
-            GetNonZeroRandomFloat()
-        ).normalized;
-
-        _rb.AddForce(direction * _launchForce, ForceMode2D.Impulse);
-    }
-
-    float GetNonZeroRandomFloat(float min = -1.0f, float max = 1.0f)
-    {
-        float num;
-
-        do
-        {
-            num = Random.Range(min, max);
-        } while (Mathf.Approximately(num, 0.0f));
-
-        return num;
+        GameBehavior.Instance.Score();
+        
+        Destroy(gameObject);
     }
 }
