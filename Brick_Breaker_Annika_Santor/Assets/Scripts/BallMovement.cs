@@ -9,9 +9,15 @@ public class BallMovement : MonoBehaviour
 
     private Rigidbody2D _rb;
 
+    private AudioSource _source;
+    [SerializeField] private AudioClip _paddleHit;
+    [SerializeField] private AudioClip _wallHit;
+    [SerializeField] private AudioClip _brickBreak;
+
     void Start()
     {
         _rb = GetComponent<Rigidbody2D>();
+        _source = GetComponent<AudioSource>();
 
         Vector2 direction = Random.insideUnitCircle;
         
@@ -23,6 +29,11 @@ public class BallMovement : MonoBehaviour
         _rb.AddForce(direction.normalized * _lauchForce, ForceMode2D.Impulse);
     }
 
+    private void Update()
+    {
+        _rb.simulated = GameBehavior.Instance.GameMode == Utilities.GameState.Play;
+    }
+
 
     private void OnCollisionEnter2D(Collision2D other)
     {
@@ -32,19 +43,30 @@ public class BallMovement : MonoBehaviour
             {
                 Vector2 direction = _rb.linearVelocity * (1.0f - _paddleInfluence)
                                     + other.rigidbody.linearVelocity * _paddleInfluence;
-                
+
                 _rb.linearVelocity = _rb.linearVelocity.magnitude * direction.normalized;
             }
 
             _rb.linearVelocity *= _speedMultiplier;
-
+            _source.resource = _paddleHit;
         }
+        else if (other.gameObject.CompareTag("Wall"))
+        {
+            _source.resource = _wallHit;
+        }
+        
+        else
+        {
+            _source.resource = _brickBreak;
+        }
+
+        _source.Play();
     }
 
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        GameBehavior.Instance.Score();
+        GameBehavior.Instance.Restart();
         
         Destroy(gameObject);
     }
